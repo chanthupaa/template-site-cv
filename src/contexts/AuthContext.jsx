@@ -46,7 +46,10 @@ export function AuthProvider({ children }) {
           };
           setUser(profile);
           setSession(profile);
+          setIsAuthModalOpen(false);
           fetchCloudResumes(fbUser.uid).catch(() => {});
+        } else {
+          setUser(null);
         }
         setLoading(false);
       });

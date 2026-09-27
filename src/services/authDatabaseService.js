@@ -134,14 +134,13 @@ export async function registerUser({ name, email, password }) {
         avatar: null,
       };
 
-      // Store in Cloud Firestore
-      try {
-        await setDoc(doc(db, 'users', fbUser.uid), userProfile);
-      } catch (_dbErr) {
-        // Silently continue if Firestore write has transient network issues
+      setSession(userProfile);
+
+      // Non-blocking background sync to Firestore
+      if (db) {
+        setDoc(doc(db, 'users', fbUser.uid), userProfile).catch(() => {});
       }
 
-      setSession(userProfile);
       return userProfile;
     } catch (err) {
       // If Email/Password is not enabled yet in Firebase Console, fallback to secure local database
@@ -227,13 +226,14 @@ export async function loginWithGoogle(_preferredEmail = '') {
       avatar: fbUser.photoURL || null,
     };
 
-    try {
-      await setDoc(doc(db, 'users', fbUser.uid), userProfile, { merge: true });
-    } catch (_dbErr) {
-      // Ignore transient Firestore network issues
+    // Immediately save local session so UI updates instantly
+    setSession(userProfile);
+
+    // Non-blocking background sync to Firestore (does not hang UI if Firestore is still initializing)
+    if (db) {
+      setDoc(doc(db, 'users', fbUser.uid), userProfile, { merge: true }).catch(() => {});
     }
 
-    setSession(userProfile);
     return userProfile;
   } catch (err) {
     throw new Error(getFriendlyAuthError(err));
@@ -267,13 +267,14 @@ export async function loginWithFacebook(_preferredEmail = '') {
       avatar: fbUser.photoURL || null,
     };
 
-    try {
-      await setDoc(doc(db, 'users', fbUser.uid), userProfile, { merge: true });
-    } catch (_dbErr) {
-      // Ignore transient Firestore network issues
+    // Immediately save local session so UI updates instantly
+    setSession(userProfile);
+
+    // Non-blocking background sync to Firestore
+    if (db) {
+      setDoc(doc(db, 'users', fbUser.uid), userProfile, { merge: true }).catch(() => {});
     }
 
-    setSession(userProfile);
     return userProfile;
   } catch (err) {
     throw new Error(getFriendlyAuthError(err));
